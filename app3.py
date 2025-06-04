@@ -101,10 +101,8 @@ if st.button("🔮 Predict iPhone Price"):
         "According to the model, the iPhone price is approximately:",
         f"**${predicted_price:,.2f}**"
     )
-    st.info("Note: This is only an estimate. Actual market prices may vary.")
 else:
     st.write("Enter the values above and click **Predict iPhone Price** to see the estimate.")
 
 # 5) Footer / Additional info
 st.markdown("---")
-st.caption("Model trained with RandomForestRegressor and pre-processing by StandardScaler + OneHotEncoder.")
