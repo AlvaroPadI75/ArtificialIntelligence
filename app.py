@@ -18,17 +18,16 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 # 1) TÍTULO Y DESCRIPCIÓN -------------------------------------------------
 st.set_page_config(
-    page_title="Detector de Spam",
+    page_title="SPAM DETECTOR",
     page_icon="✉️",
     layout="centered"
 )
 
-st.title("🔎 Clasificador de Spam")
+st.title("🔎 SPAM CLASSIFIER")
 st.markdown(
     """
-    Esta aplicación usa un modelo LSTM previamente entrenado para clasificar
-    correos/e-mails como **SPAM** o **HAM** (no spam).
-    Ingresa el texto del correo y presiona “Clasificar”.
+This app uses a pre-trained LSTM model to classify emails as **SPAM** or **HAM** (not spam).
+Enter the email text and press "Classify."
     """
 )
 
@@ -48,50 +47,42 @@ model = cargar_modelo()
 # 3) FUNCIÓN DE LIMPIEZA ---------------------------------------------------
 def limpiar_texto(texto):
     texto = texto.lower()
-    texto = re.sub(r"http\S+", "", texto)            # quitar URLs
-    texto = re.sub(r"\d+", "", texto)                 # quitar dígitos
+    texto = re.sub(r"http\S+", "", texto)            
+    texto = re.sub(r"\d+", "", texto)                 
     texto = texto.translate(str.maketrans("", "", string.punctuation))
     texto = texto.strip()
     return texto
 
-# 4) FUNCIÓN DE PREDICCIÓN -------------------------------------------------
 def predecir_spam(texto_crudo, tokenizer, model, max_len=100):
-    """
-    Recibe un string (texto_crudo), lo limpia, tokeniza, hace padding y usa el modelo
-    para devolver (prob_spam, etiqueta), donde etiqueta es "SPAM" o "HAM".
-    """
-    # 1) Limpiar
+
     texto_limpio = limpiar_texto(texto_crudo)
 
-    # 2) Tokenizar → secuencia de índices
     secuencia = tokenizer.texts_to_sequences([texto_limpio])
 
-    # 3) Padding / truncado
     seq_pad = pad_sequences(secuencia, maxlen=max_len, padding="post", truncating="post")
 
-    # 4) Predecir
     prob_spam = model.predict(seq_pad)[0][0]
     etiqueta = "SPAM" if prob_spam > 0.5 else "HAM"
 
     return prob_spam, etiqueta
 
 # 5) INTERFAZ PRINCIPAL ----------------------------------------------------
-st.subheader("Introduce el correo o mensaje para clasificar")
+st.subheader("Introduce the message or email")
 texto_entrada = st.text_area(
-    label="✉️ Pega aquí el texto completo del correo:",
+    label="✉️ Paste here the fulle message of your email",
     height=200,
-    help="Escribe o pega el contenido del correo que quieras clasificar como spam o ham."
+    help="Type or paste the content of the email you want to classify as spam or ham."
 )
 
 if st.button("🚀 Clasificar"):
     if texto_entrada.strip() == "":
-        st.warning("Por favor, ingresa algo de texto antes de clasificar.")
+        st.warning("Please enter some text before rating.")
     else:
-        with st.spinner("Analizando el mensaje…"):
+        with st.spinner("Analizing…"):
             prob, etiqueta = predecir_spam(texto_entrada, tokenizer, model)
         st.markdown("---")
-        st.write(f"**Probabilidad de SPAM:** `{prob:.3f}`")
+        st.write(f"**Probability SPAM:** `{prob:.3f}`")
         if etiqueta == "SPAM":
-            st.error("🏴 Etiqueta predicha: **SPAM**")
+            st.error("🏴 Prediction: **SPAM**")
         else:
-            st.success("✅ Etiqueta predicha: **HAM**")
+            st.success("✅ Prediction: **HAM**")
