@@ -174,89 +174,74 @@ def pet_page():
 # 3) IPHONE PRICE PREDICTION PAGE
 # ============================================
 
-@st.cache_resource(show_spinner=False)
-def load_iphone_model():
-    with open("modelo_regresion_iphone.pkl", "rb") as f:
-        pipeline = pickle.load(f)
-    return pipeline
+@st.cache_resource
+def load_regression_model(path="modelo_regresion_iphone.pkl"):
+    return joblib.load(path)
 
-def parse_gdp(gdp_str: str):
-    """
-    Convert a string like "$27.72 trillion" or "$3.5 billion" or "$450,000,000"
-    into a numeric value in plain dollars (float).
-    """
-    if not gdp_str or not isinstance(gdp_str, str):
-        return None
-    s = gdp_str.replace("$", "").replace(",", "").strip().lower()
-    if "trillion" in s:
-        val = float(s.replace("trillion", "").strip())
-        return val * 1e12
-    if "billion" in s:
-        val = float(s.replace("billion", "").strip())
-        return val * 1e9
-    try:
-        return float(s)
-    except:
-        return None
+pipeline_reg = load_regression_model()
 
-def parse_pc_gdp(pc_str: str):
-    """
-    Convert a string like "$12,345" or "12345" into a float.
-    """
-    if not pc_str or not isinstance(pc_str, str):
-        return None
-    s = pc_str.replace("$", "").replace(",", "").strip()
-    try:
-        return float(s)
-    except:
-        return None
+# 2) Extract list of countries that the model expects
+#    (we read it from the fitted OneHotEncoder inside the pipeline)
+ohe = pipeline_reg.named_steps['preprocessor'].named_transformers_['cat']
+country_list = ohe.categories_[0].tolist()
 
-def iphone_page():
-    st.title("📱 iPhone Price Classification (Expensive vs. Not Expensive)")
-    st.markdown(
-        """
-        Enter the following information for a country, and the model will predict
-        whether iPhones in that country are classified as **"Expensive"** (above median)
-        or **"Not Expensive"** (below median), based on historical data.
-        """
+# 3) User inputs
+st.subheader("Input Data for Prediction")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    tax_input = st.number_input(
+        label="Tax (in USD)",
+        min_value=0.0,
+        value=50.0,
+        step=1.0,
+        format="%.2f"
+    )
+    gdp_input = st.number_input(
+        label="GDP (total, in USD)",
+        min_value=0.0,
+        value=2_000_000_000_000.0,  # default: 2 trillion
+        step=1e9,
+        format="%.0f"
     )
 
-    # 1) Load the regression/classification pipeline
-    pipeline = load_iphone_model()
+with col2:
+    pc_gdp_input = st.number_input(
+        label="GDP per Capita (in USD)",
+        min_value=0.0,
+        value=50_000.0,
+        step=1000.0,
+        format="%.2f"
+    )
+    country_input = st.selectbox(
+        label="Country",
+        options=country_list,
+        index=0
+    )
 
-    # 2) User inputs for features
-    st.subheader("Enter input features:")
-    country = st.text_input("Country name (e.g., United States):", value="United States")
-    tax = st.number_input("Tax rate (numeric, e.g. 0.07 for 7%):", min_value=0.0, format="%.4f", value=0.07)
-    gdp_str = st.text_input("GDP (e.g. \"$27.72 trillion\" or \"$3.5 billion\"):", value="$1 trillion")
-    pcgdp_str = st.text_input("Per Capita GDP (e.g. \"$45,000\" or \"45000\"):", value="$45,000")
+# 4) Perform prediction when user clicks button
+if st.button("🔮 Predict iPhone Price"):
+    # Build a single-row DataFrame with the same column names the model expects
+    X_new = pd.DataFrame([{
+        'Tax': tax_input,
+        'GDP_num': gdp_input,
+        'PC_GDP_num': pc_gdp_input,
+        'Country': country_input
+    }])
 
-    if st.button("Predict Expensiveness"):
-        # 3) Parse GDP strings
-        gdp_val = parse_gdp(gdp_str)
-        pcgdp_val = parse_pc_gdp(pcgdp_str)
+    # Use the pipeline to predict
+    predicted_price = pipeline_reg.predict(X_new)[0]
 
-        if gdp_val is None or pcgdp_val is None:
-            st.error("Could not parse GDP or Per Capita GDP. Please enter in a valid format.")
-            return
-
-        # 4) Build a single‐row DataFrame with the exact columns the pipeline expects
-        df_input = pd.DataFrame({
-            "Tax": [tax],
-            "GDP_num": [gdp_val],
-            "PC_GDP_num": [pcgdp_val],
-            "Country": [country]
-        })
-
-        # 5) Make prediction (this pipeline should output a probability for the “Expensive” class)
-        try:
-            prob = pipeline.predict_proba(df_input)[0][1]  # probability of class 1 = “Expensive”
-            label = "Expensive" if prob >= 0.5 else "Not Expensive"
-            st.markdown("---")
-            st.write(f"**Prediction:** `{label}`")
-            st.write(f"**Probability (Expensive):** `{prob:.3f}`")
-        except Exception as e:
-            st.error(f"Error during prediction: {e}")
+    st.markdown("---")
+    st.subheader("Prediction Result")
+    st.metric(label="💰 Estimated Price (USD)", value=f"{predicted_price:,.2f}")
+    st.write(
+        "According to the model, the iPhone price is approximately:",
+        f"**${predicted_price:,.2f}**"
+    )
+else:
+    st.write("Enter the values above and click **Predict iPhone Price** to see the estimate.")
 
 # ============================================
 # MAIN: render the chosen page
