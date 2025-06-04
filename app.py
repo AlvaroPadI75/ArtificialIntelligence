@@ -74,7 +74,7 @@ texto_entrada = st.text_area(
     help="Type or paste the content of the email you want to classify as spam or ham."
 )
 
-if st.button("🚀 Clasificar"):
+if st.button("🚀 Classify"):
     if texto_entrada.strip() == "":
         st.warning("Please enter some text before rating.")
     else:
