@@ -86,7 +86,7 @@ if uploaded_file is not None:
 
     # 4.5) Mostrar gráfico de barras con todas las probabilidades
     st.subheader("Probabilidades por clase")
-    probs_dict = {class_names[i]: float(preds[0][i]) for i in range(len(class_names))}
+    probs_dict = {class_names[i]: float(preds[0][i]) for i in range(preds.shape[1])}
     st.bar_chart(probs_dict)
 
 else:
