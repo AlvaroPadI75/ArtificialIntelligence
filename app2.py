@@ -7,19 +7,23 @@ Original file is located at
     https://colab.research.google.com/drive/1EyCiwI5PlU-zYVet7_JU3LskDvh7FK4m
 """
 
-# pages/3_Image_Pets_Classification.py
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-st.title("🐾 Clasificador de Razas (Oxford-IIIT Pet)")
+st.set_page_config(
+    page_title="🐕 Dog Breed Classifier",
+    page_icon="🐶",
+    layout="centered"
+)
+
+st.title("🐾 Dog Breed Classifier (Oxford-IIIT Pet)")
 
 st.markdown(
     """
-    Esta página permite subir la foto de una mascota (perro/gato) y el modelo preentrenado
-    (MobileNetV2 + capa superior) predice la raza (37 clases).
+   This page allows you to upload a photo of a pet (dog/cat) and the 
+   pre-trained model (MobileNetV2 + top layer) predicts the breed (37 classes).
     """
 )
 
@@ -43,8 +47,7 @@ class_names = [
     "Toy Poodle", "Yorkshire Terrier"
 ]
 
-# 3) Función de preprocesamiento (mismo que en el entrenamiento)
-IMG_SIZE = 128  # debe coincidir con el valor que usaste en el entrenamiento
+IMG_SIZE = 128
 def preprocess_image_pets(img: Image.Image, target_size=(IMG_SIZE, IMG_SIZE)):
     """
     - Convertir a RGB
@@ -55,39 +58,37 @@ def preprocess_image_pets(img: Image.Image, target_size=(IMG_SIZE, IMG_SIZE)):
     img = img.convert("RGB")
     img = img.resize(target_size, resample=Image.BICUBIC)
     arr = np.array(img).astype("float32") / 255.0
-    arr = np.expand_dims(arr, axis=0)  # shape → (1, IMG_SIZE, IMG_SIZE, 3)
+    arr = np.expand_dims(arr, axis=0)  
     return arr
 
-# 4) Interface: subir imagen
 uploaded_file = st.file_uploader(
-    "Sube la foto de tu mascota (JPG o PNG, por favor).",
+    "Uploud your pet's photo  (JPG or PNG).",
     type=["jpg", "jpeg", "png"]
 )
 
 if uploaded_file is not None:
-    # 4.1) Mostrar la imagen original
     imagen = Image.open(uploaded_file)
-    st.image(imagen, caption="Imagen cargada", use_column_width=True)
+    st.image(imagen, caption="Image uploaded", use_column_width=True)
 
     # 4.2) Preprocesar
     x = preprocess_image_pets(imagen, target_size=(IMG_SIZE, IMG_SIZE))
 
     # 4.3) Predecir
-    with st.spinner("Clasificando la raza…"):
+    with st.spinner("Analizing…"):
         preds = model.predict(x)           # devuelve un array shape (1, 37)
         prob = float(np.max(preds))        # probabilidad más alta
         clase_idx = int(np.argmax(preds))  # índice de la clase (0..36)
         clase_nombre = class_names[clase_idx]
 
-    # 4.4) Mostrar resultados
+
     st.markdown("---")
-    st.write(f"**Raza predicha:** `{clase_nombre}`")
-    st.write(f"**Probabilidad (softmax):** `{prob:.3f}`")
+    st.write(f"**Result:** `{clase_nombre}`")
+    st.write(f"**Probability:** `{prob:.3f}`")
 
     # 4.5) Mostrar gráfico de barras con todas las probabilidades
-    st.subheader("Probabilidades por clase")
+    st.subheader("Probabilities by class")
     probs_dict = {class_names[i]: float(preds[0][i]) for i in range(preds.shape[1])}
     st.bar_chart(probs_dict)
 
 else:
-    st.info("Por favor, sube la imagen de tu mascota para obtener la predicción.")
+    st.info("Please upload your pet's picture to get the prediction.")
